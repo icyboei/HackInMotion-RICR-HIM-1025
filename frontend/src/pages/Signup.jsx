@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../utils/api'
 import ErrorBanner from '../components/ErrorBanner'
+import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
+import { MedicalDoodleBackground } from '../components/ui/MedicalDoodles'
+import { AlertTriangleIcon, CheckIcon, ArrowRightIcon } from '../components/ui/Icons'
 
 function Signup() {
   const [name, setName]         = useState('')
@@ -37,30 +41,40 @@ function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
+    <div className="min-h-screen bg-[#F5F9F7] text-[#12302E] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden font-sans">
+      {/* Background Medical Doodles */}
+      <MedicalDoodleBackground density="normal" />
+
+      <div className="relative z-10 w-full max-w-md mx-auto">
+        {/* Brand Header */}
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 text-teal-400 font-bold text-2xl">
-            <span className="text-3xl">✚</span>
+          <Link to="/" className="inline-flex items-center gap-2 text-[#12302E] font-extrabold text-2xl tracking-tight">
+            <div className="w-9 h-9 rounded-xl bg-[#0F766E] text-white flex items-center justify-center font-black text-xl shadow-sm">
+              ✚
+            </div>
             <span>MediSafe</span>
           </Link>
-          <p className="text-slate-400 text-sm mt-2">Create your free account</p>
+          <p className="text-[#64748B] text-sm mt-2 font-medium">Create your free account</p>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+        {/* Auth Card */}
+        <Card className="bg-white border-[#DCE8E5] rounded-2xl p-8 shadow-sm">
           {success ? (
-            <div className="text-center py-4">
-              <div className="text-5xl mb-4">✅</div>
-              <p className="text-green-400 font-semibold">Account created!</p>
-              <p className="text-slate-400 text-sm mt-1">Redirecting to login...</p>
+            <div className="text-center py-6">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center mx-auto mb-3.5 shadow-sm">
+                <CheckIcon className="w-7 h-7" />
+              </div>
+              <p className="text-[#12302E] font-bold text-lg">Account created!</p>
+              <p className="text-[#64748B] text-sm mt-1 font-medium">Redirecting to login page...</p>
             </div>
           ) : (
             <>
               <ErrorBanner message={error} onDismiss={() => setError('')} />
-              <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+              <form onSubmit={handleSubmit} className="space-y-4 mt-2">
                 <div>
-                  <label htmlFor="signup-name" className="block text-sm font-medium text-slate-300 mb-2">Full Name</label>
+                  <label htmlFor="signup-name" className="block text-xs font-bold text-[#64748B] uppercase tracking-wide mb-1.5">
+                    Full Name
+                  </label>
                   <input
                     id="signup-name"
                     type="text"
@@ -69,11 +83,14 @@ function Signup() {
                     placeholder="Jane Smith"
                     required
                     autoComplete="name"
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-slate-100 rounded-xl text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                    className="w-full px-4 py-3 bg-white border border-[#DCE8E5] text-[#12302E] rounded-xl text-sm placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all shadow-sm"
                   />
                 </div>
+
                 <div>
-                  <label htmlFor="signup-email" className="block text-sm font-medium text-slate-300 mb-2">Email address</label>
+                  <label htmlFor="signup-email" className="block text-xs font-bold text-[#64748B] uppercase tracking-wide mb-1.5">
+                    Email address
+                  </label>
                   <input
                     id="signup-email"
                     type="email"
@@ -82,11 +99,14 @@ function Signup() {
                     placeholder="you@example.com"
                     required
                     autoComplete="email"
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-slate-100 rounded-xl text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                    className="w-full px-4 py-3 bg-white border border-[#DCE8E5] text-[#12302E] rounded-xl text-sm placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all shadow-sm"
                   />
                 </div>
+
                 <div>
-                  <label htmlFor="signup-password" className="block text-sm font-medium text-slate-300 mb-2">Password</label>
+                  <label htmlFor="signup-password" className="block text-xs font-bold text-[#64748B] uppercase tracking-wide mb-1.5">
+                    Password
+                  </label>
                   <input
                     id="signup-password"
                     type="password"
@@ -95,11 +115,14 @@ function Signup() {
                     placeholder="Minimum 8 characters"
                     required
                     autoComplete="new-password"
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-slate-100 rounded-xl text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                    className="w-full px-4 py-3 bg-white border border-[#DCE8E5] text-[#12302E] rounded-xl text-sm placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all shadow-sm"
                   />
                 </div>
+
                 <div>
-                  <label htmlFor="signup-confirm" className="block text-sm font-medium text-slate-300 mb-2">Confirm Password</label>
+                  <label htmlFor="signup-confirm" className="block text-xs font-bold text-[#64748B] uppercase tracking-wide mb-1.5">
+                    Confirm Password
+                  </label>
                   <input
                     id="signup-confirm"
                     type="password"
@@ -108,36 +131,39 @@ function Signup() {
                     placeholder="••••••••"
                     required
                     autoComplete="new-password"
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 text-slate-100 rounded-xl text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                    className="w-full px-4 py-3 bg-white border border-[#DCE8E5] text-[#12302E] rounded-xl text-sm placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all shadow-sm"
                   />
                 </div>
-                <button
+
+                <Button
                   id="signup-submit-btn"
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-60 text-sm"
+                  loading={loading}
+                  variant="primary"
+                  size="lg"
+                  className="w-full font-bold shadow-sm mt-2"
+                  icon={loading ? undefined : ArrowRightIcon}
+                  iconPosition="right"
                 >
-                  {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Creating account...
-                    </span>
-                  ) : 'Create Account'}
-                </button>
+                  Create Account
+                </Button>
               </form>
             </>
           )}
 
-          <p className="text-center text-sm text-slate-400 mt-6">
+          <p className="text-center text-sm text-[#64748B] mt-6 font-medium">
             Already have an account?{' '}
-            <Link to="/login" className="text-teal-400 hover:text-teal-300 font-medium">
+            <Link to="/login" className="text-[#0F766E] hover:underline font-bold">
               Sign in
             </Link>
           </p>
-        </div>
+        </Card>
 
-        <p className="text-center text-xs text-slate-600 mt-6">
-          ⚠️ MediSafe is for informational purposes only. Not a substitute for professional medical advice.
+        {/* Disclaimer */}
+        <p className="text-center text-xs text-[#94A3B8] font-medium mt-6 flex items-center justify-center gap-1.5 max-w-xs mx-auto">
+          <AlertTriangleIcon className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
+          <span>MediSafe is for informational purposes only. Not a substitute for professional medical advice.</span>
         </p>
       </div>
     </div>

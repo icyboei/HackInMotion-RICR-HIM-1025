@@ -57,7 +57,7 @@ function MedicineSearch({ onSelect, placeholder = 'Search medicine (e.g. aspirin
   }, [])
 
   function handleSelect(medicine) {
-    setQuery(medicine.genericName || medicine.brandName)
+    setQuery('')
     setOpen(false)
     setSuggestions([])
     onSelect(medicine)
