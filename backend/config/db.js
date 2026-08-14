@@ -10,7 +10,10 @@ async function connectDB() {
 
     db = client.db("medsafe");
 
+    await db.command({ ping: 1 });
+
     console.log("MongoDB connected successfully ✅");
+    console.log("Database: medsafe");
   } catch (error) {
     console.error("MongoDB connection failed ❌");
     console.error(error);
