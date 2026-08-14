@@ -1,107 +1,62 @@
 /**
- * aiService.js
- * MediSafe AI Medical Assistant
+ * aiService.js — AI Medical Assistant Service
+ *
+ * Architecture: RAG pattern
+ *   User question → medicine detection → data retrieval → safety guard → LLM → response verification → user
+ *
+ * Uses Google Gemini API (configurable via GEMINI_API_KEY env var).
+ * Falls back to a structured stub response if no key is configured.
+ *
+ * SAFETY RULES (enforced in the system prompt):
+ * - Never prescribe medicine
+ * - Never diagnose disease
+ * - Never invent drug interactions, side effects, or dosages
+ * - Never tell user to stop a prescribed medicine
+ * - Always recommend consulting a doctor/pharmacist
+ * - Use only retrieved drug data, not internal LLM knowledge
  */
 
-const { GoogleGenAI } = require("@google/genai");
+const https = require("https");
 const { DrugDataProvider } = require("./drugDataProvider");
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
-if (!GEMINI_API_KEY) {
-  console.warn("⚠️ GEMINI_API_KEY is not configured.");
-}
+// ─── Medicine detection ───────────────────────────────────────────────────────
 
-const ai = GEMINI_API_KEY
-  ? new GoogleGenAI({ apiKey: GEMINI_API_KEY })
-  : null;
-
-// ============================================================
-// Medicine detection
-// ============================================================
-
+/** Detect medicine names mentioned in a question using a simple keyword approach */
 async function detectMedicines(text) {
+  // Common medicine name patterns — extract candidates
   const words = text.match(/[a-zA-Z]{3,}/g) || [];
-
-  const stopWords = new Set([
-    "what",
-    "does",
-    "this",
-    "that",
-    "with",
-    "have",
-    "will",
-    "from",
-    "they",
-    "take",
-    "used",
-    "when",
-    "how",
-    "can",
-    "why",
-    "are",
-    "for",
-    "the",
-    "and",
-    "should",
-    "watch",
-    "safe",
-    "drug",
-    "medicine",
-    "about",
-    "tell",
-    "give",
-    "want",
-    "know",
-    "side",
-    "effect",
-    "effects",
-    "interaction",
-    "doctor",
-    "pharmacist",
-    "prescribed",
-    "taking",
-  ]);
-
   const candidates = [];
 
+  // Filter out common English stop words
+  const stopWords = new Set([
+    "what", "does", "this", "that", "with", "have", "will", "from", "they",
+    "take", "used", "when", "how", "can", "why", "are", "for", "the", "and",
+    "should", "watch", "safe", "drug", "medicine", "about", "tell", "give",
+    "want", "know", "side", "effect", "effects", "interaction", "doctor",
+    "pharmacist", "prescribed", "taking",
+  ]);
+
   for (const word of words) {
-    if (
-      word.length >= 4 &&
-      !stopWords.has(word.toLowerCase())
-    ) {
+    if (!stopWords.has(word.toLowerCase()) && word.length >= 4) {
       candidates.push(word);
     }
   }
 
+  // Try to look up each candidate against RxNorm
   const detected = [];
-
   for (const candidate of candidates.slice(0, 5)) {
-    try {
-      const results =
-        await DrugDataProvider.searchMedicine(candidate);
-
-      if (
-        results &&
-        results.length > 0 &&
-        results[0].score > 70
-      ) {
-        detected.push(results[0]);
-      }
-    } catch (error) {
-      console.error(
-        `Medicine lookup failed for ${candidate}:`,
-        error.message
-      );
+    const results = await DrugDataProvider.searchMedicine(candidate);
+    if (results.length > 0 && results[0].score > 70) {
+      detected.push(results[0]);
     }
   }
-
   return detected;
 }
 
-// ============================================================
-// Safety guard
-// ============================================================
+// ─── Safety guard ─────────────────────────────────────────────────────────────
 
 const UNSAFE_PATTERNS = [
   /prescri(be|ption)/i,
@@ -114,81 +69,92 @@ const UNSAFE_PATTERNS = [
 ];
 
 function verifySafeResponse(text) {
-  return !UNSAFE_PATTERNS.some((pattern) =>
-    pattern.test(text)
-  );
-}
-
-// ============================================================
-// System prompt
-// ============================================================
-
-const SYSTEM_PROMPT = `
-You are MediSafe's medical information assistant.
-
-Your role is strictly educational.
-
-You may:
-1. Explain what a medicine is commonly used for.
-2. Explain drug interactions using retrieved drug data.
-3. Explain possible side effects using retrieved drug data.
-4. Explain medical terminology.
-5. Suggest questions a user can ask their doctor or pharmacist.
-
-ABSOLUTE SAFETY RULES:
-
-- NEVER prescribe medication.
-- NEVER diagnose a disease.
-- NEVER recommend starting a medicine.
-- NEVER recommend stopping a prescribed medicine.
-- NEVER recommend replacing one medicine with another.
-- NEVER invent drug interactions.
-- NEVER invent dosages.
-- NEVER invent side effects.
-- NEVER make unsupported medical claims.
-- If reliable drug data is unavailable, clearly say so.
-- Encourage the user to consult a doctor or pharmacist for personal medical decisions.
-
-Always end your response with:
-
-⚠️ This information is for educational purposes only. Consult your doctor or pharmacist before making any changes to your medication.
-`;
-
-// ============================================================
-// Gemini call
-// ============================================================
-
-async function callGemini(userMessage, drugContext) {
-  if (!ai) {
-    throw new Error("GEMINI_API_KEY is not configured");
+  for (const pattern of UNSAFE_PATTERNS) {
+    if (pattern.test(text)) {
+      return false;
+    }
   }
-
-  const prompt = `
-${SYSTEM_PROMPT}
-
-${drugContext
-    ? `RETRIEVED DRUG DATA:
-${drugContext}`
-    : `No specific drug data was retrieved for this question.
-Do not invent specific medical facts.`}
-
-USER QUESTION:
-${userMessage}
-`;
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
-    contents: prompt,
-  });
-
-  return response.text || "";
+  return true;
 }
 
-// ============================================================
-// Public API
-// ============================================================
+// ─── LLM call ─────────────────────────────────────────────────────────────────
+
+function postJSON(url, body) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const urlObj = new URL(url);
+    const options = {
+      hostname: urlObj.hostname,
+      path: urlObj.pathname + urlObj.search,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(data),
+      },
+      timeout: 20000,
+    };
+
+    const req = https.request(options, (res) => {
+      let response = "";
+      res.on("data", (chunk) => (response += chunk));
+      res.on("end", () => {
+        try { resolve(JSON.parse(response)); }
+        catch { reject(new Error("Invalid JSON from Gemini")); }
+      });
+    });
+    req.on("error", reject);
+    req.on("timeout", () => { req.destroy(); reject(new Error("Gemini request timed out")); });
+    req.write(data);
+    req.end();
+  });
+}
+
+async function callGemini(systemPrompt, userMessage) {
+  const body = {
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: `${systemPrompt}\n\nUser question: ${userMessage}` }],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: 800,
+    },
+  };
+
+  const response = await postJSON(GEMINI_URL, body);
+  return response?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+const SYSTEM_PROMPT = `You are MediSafe's medical information assistant. Your role is strictly limited to:
+1. Explaining what a medicine is commonly used for (based on retrieved data provided to you)
+2. Explaining drug interactions in simple language (only from the data provided)
+3. Describing possible side effects (only from the data provided)
+4. Suggesting questions for the user to ask their doctor or pharmacist
+5. Explaining medical terms and warning labels
+
+ABSOLUTE RULES — never violate these:
+- NEVER prescribe or recommend a medicine
+- NEVER diagnose any condition
+- NEVER invent drug interactions, dosages, or side effects
+- NEVER tell the user to stop taking a prescribed medicine
+- NEVER suggest substituting one medicine for another
+- NEVER make medical claims not supported by the drug data provided to you
+- ALWAYS end your response with: "⚠️ This information is for educational purposes only. Consult your doctor or pharmacist before making any changes to your medication."
+- If you are uncertain, say: "I don't have reliable information about this. Please consult your pharmacist or doctor."
+
+Only use information from the drug data context provided. Do not use your internal training knowledge to make specific medical claims.`;
 
 const AIService = {
+  /**
+   * Answer a medical question with safety guards applied.
+   * @param {string} question — user's question
+   * @param {string} userId — for logging
+   * @returns { answer, medicinesDetected, dataSourced, safetyPassed }
+   */
   async answer(question, userId) {
     if (!question || question.trim().length < 3) {
       return {
@@ -199,76 +165,51 @@ const AIService = {
       };
     }
 
-    // --------------------------------------------
-    // 1. Detect medicines
-    // --------------------------------------------
+    // Step 1: Detect medicines in question
+    const detectedMedicines = await detectMedicines(question);
 
-    const detectedMedicines =
-      await detectMedicines(question);
-
-    // --------------------------------------------
-    // 2. Retrieve medicine information
-    // --------------------------------------------
-
+    // Step 2: Retrieve drug data for detected medicines
     let drugContext = "";
-
     if (detectedMedicines.length > 0) {
       const details = await Promise.all(
-        detectedMedicines.map((medicine) =>
-          DrugDataProvider.getMedicineDetails(
-            medicine.rxcui
-          )
-        )
+        detectedMedicines.map((m) => DrugDataProvider.getMedicineDetails(m.rxcui))
       );
-
       drugContext = details
-        .filter(Boolean)
-        .map(
-          (d) => `
-Medicine: ${d.genericName}
-RXCUI: ${d.rxcui}
-Active ingredients: ${
-            (d.activeIngredients || []).join(", ") ||
-            "not available"
-          }
-`
-        )
-        .join("\n");
+        .map((d) => `Medicine: ${d.genericName} (RXCUI: ${d.rxcui})\nActive ingredients: ${(d.activeIngredients || []).join(", ") || "not available"}`)
+        .join("\n\n");
     }
 
-    const dataSourced =
-      detectedMedicines.length > 0 &&
-      drugContext.length > 0;
+    const contextualPrompt = drugContext
+      ? `${SYSTEM_PROMPT}\n\nDrug data context (use this — do not rely on internal knowledge):\n${drugContext}`
+      : `${SYSTEM_PROMPT}\n\nNo specific drug data was retrieved for this question. Answer only in general educational terms and strongly recommend consulting a pharmacist.`;
 
-    // --------------------------------------------
-    // 3. Call Gemini
-    // --------------------------------------------
+    // Step 3: Call LLM (or stub if no key)
+    let rawAnswer = "";
+    let dataSourced = detectedMedicines.length > 0 && drugContext.length > 0;
 
-    let rawAnswer;
+    if (!GEMINI_API_KEY) {
+      // Stub response when no API key
+      rawAnswer = `I'm sorry, the AI assistant requires an API key to be configured. 
 
-    try {
-      rawAnswer = await callGemini(
-        question,
-        drugContext
-      );
-    } catch (error) {
-      console.error(
-        "Gemini API error:",
-        error.message
-      );
+For information about your medicines, I recommend:
+- Consulting your pharmacist (most accessible healthcare professional)
+- Visiting MedlinePlus (medlineplus.gov) — free, authoritative drug information
+- Calling your doctor's office
 
-      throw new Error(
-        "Gemini API request failed"
-      );
+⚠️ This information is for educational purposes only. Consult your doctor or pharmacist before making any changes to your medication.`;
+    } else {
+      try {
+        rawAnswer = await callGemini(contextualPrompt, question);
+      } catch (err) {
+        console.error("Gemini API error:", err.message);
+        rawAnswer = `The AI assistant is temporarily unavailable. For medicine information, please consult your pharmacist or visit MedlinePlus (medlineplus.gov).
+
+⚠️ This information is for educational purposes only. Consult your doctor or pharmacist before making any changes to your medication.`;
+      }
     }
 
-    // --------------------------------------------
-    // 4. Safety verification
-    // --------------------------------------------
-
-    const safetyPassed =
-      verifySafeResponse(rawAnswer);
-
+    // Step 4: Safety verification
+    const safetyPassed = verifySafeResponse(rawAnswer);
     const finalAnswer = safetyPassed
       ? rawAnswer
       : `I'm unable to provide a safe response to that question. Please consult your doctor or pharmacist directly.
@@ -277,16 +218,11 @@ Active ingredients: ${
 
     return {
       answer: finalAnswer,
-      medicinesDetected:
-        detectedMedicines.map(
-          (medicine) => medicine.genericName
-        ),
+      medicinesDetected: detectedMedicines.map((m) => m.genericName),
       dataSourced,
       safetyPassed,
     };
   },
 };
 
-module.exports = {
-  AIService,
-};
+module.exports = { AIService };
