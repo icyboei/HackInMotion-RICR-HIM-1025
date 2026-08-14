@@ -40,7 +40,7 @@ function Hero() {
 
           {/* CTAs */}
           <div className="flex flex-wrap gap-4 pt-2 w-full sm:w-auto">
-            <Link to="/checker" className="no-underline w-full sm:w-auto">
+            <Link to="/signup" className="no-underline w-full sm:w-auto">
               <Button size="lg" variant="primary" icon={ArrowRightIcon} iconPosition="right" className="w-full sm:w-auto">
                 Check Medicine Safety
               </Button>
