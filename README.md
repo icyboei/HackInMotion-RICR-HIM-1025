@@ -3,6 +3,12 @@
 > **Medical Disclaimer:** MediSafe is for educational and informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult your doctor or pharmacist before making any decisions about your medications.
 
 ---
+#For judge's;
+link for our Prototype: "https://hack-in-motion-ricr-him-1025.vercel.app"
+gmail:"prathmeshganeshe@gmail.com"
+password:"12345678"
+[Note* I, Prathmesh (icyboei), had an amazing time with my team at RICR. The entire hackathon was a wonderful and memorable experience. Everything, from the internet facilities and food to the overall management, was well-organized and truly appreciable.
+A heartfelt thank you to everyone who contributed to making this experience so great. That’s it from my side. Signing off! :)]  
 
 ## Overview
 
