@@ -95,12 +95,9 @@ const DrugInteractionService = {
       };
     }
 
-    // Get all unique RXCUIs
-    const rxcuis = [...new Set(medicines.map((m) => m.rxcui).filter(Boolean))];
-
-    // Fetch all interactions in one API call (RxNorm supports multi-rxcui)
-    const allInteractions = rxcuis.length >= 2
-      ? await DrugDataProvider.getInteractions(rxcuis)
+    // Fetch interactions across all medicine pairs
+    const allInteractions = medicines.length >= 2
+      ? await DrugDataProvider.getInteractions(medicines)
       : [];
 
     // Annotate interactions with full medicine names where possible
