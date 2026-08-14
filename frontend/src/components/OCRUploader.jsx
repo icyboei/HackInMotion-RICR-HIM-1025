@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { FileTextIcon } from './ui/Icons'
 
 /**
  * OCRUploader — Prescription image upload with Tesseract.js (browser-side OCR)
@@ -66,7 +67,7 @@ function OCRUploader({ onExtracted, loading }) {
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onClick={() => fileRef.current?.click()}
-        className="border-2 border-dashed border-slate-700 hover:border-teal-600 rounded-2xl p-8 text-center cursor-pointer transition-colors group"
+        className="border-2 border-dashed border-[#DCE8E5] hover:border-[#0F766E] bg-[#EEF6F4]/30 rounded-2xl p-8 text-center cursor-pointer transition-colors group"
       >
         <input
           ref={fileRef}
@@ -76,22 +77,24 @@ function OCRUploader({ onExtracted, loading }) {
           className="hidden"
           id="prescription-upload"
         />
-        <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">📄</div>
-        <p className="text-slate-300 text-sm font-medium">Drop prescription image here</p>
-        <p className="text-slate-500 text-xs mt-1">or click to browse · JPG, PNG, PDF</p>
-        <p className="text-xs text-teal-500/70 mt-2">Browser-side processing — image is NOT uploaded to a server</p>
+        <div className="w-12 h-12 rounded-2xl bg-[#EEF6F4] text-[#0F766E] border border-[#DCE8E5] flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+          <FileTextIcon className="w-6 h-6" />
+        </div>
+        <p className="text-[#12302E] text-sm font-bold">Drop prescription image here</p>
+        <p className="text-[#64748B] text-xs mt-1 font-medium">or click to browse · JPG, PNG, PDF</p>
+        <p className="text-xs text-[#0F766E] font-semibold mt-2.5">Browser-side processing — image is NOT uploaded to a server</p>
       </div>
 
       {/* Progress */}
       {scanning && (
-        <div>
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+        <div className="bg-white border border-[#DCE8E5] rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-xs font-semibold text-[#64748B] mb-1.5">
             <span>Scanning prescription...</span>
             <span>{progress}%</span>
           </div>
-          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+          <div className="h-2 bg-[#EEF6F4] rounded-full overflow-hidden border border-[#DCE8E5]">
             <div
-              className="h-full bg-teal-500 transition-all duration-300"
+              className="h-full bg-[#0F766E] transition-all duration-300 rounded-full"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -100,13 +103,13 @@ function OCRUploader({ onExtracted, loading }) {
 
       {/* Preview */}
       {imagePreview && !scanning && (
-        <div className="rounded-xl overflow-hidden border border-slate-700 max-h-48 flex items-center justify-center bg-slate-900">
-          <img src={imagePreview} alt="Prescription preview" className="max-h-48 object-contain" />
+        <div className="rounded-2xl overflow-hidden border border-[#DCE8E5] max-h-48 flex items-center justify-center bg-white p-2 shadow-sm">
+          <img src={imagePreview} alt="Prescription preview" className="max-h-44 object-contain rounded-xl" />
         </div>
       )}
 
       {error && (
-        <p className="text-sm text-red-400 bg-red-950/30 border border-red-800/50 rounded-xl px-4 py-3">{error}</p>
+        <p className="text-xs font-semibold text-rose-800 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 shadow-sm">{error}</p>
       )}
     </div>
   )

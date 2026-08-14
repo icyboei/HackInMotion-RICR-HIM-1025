@@ -7,6 +7,20 @@ import SafetyStatusCard from '../components/SafetyStatusCard'
 import OCRUploader from '../components/OCRUploader'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorBanner from '../components/ErrorBanner'
+import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
+import { Badge } from '../components/ui/Badge'
+import { MedicalDoodleBackground } from '../components/ui/MedicalDoodles'
+import {
+  ShieldCheckIcon,
+  SearchIcon,
+  FileTextIcon,
+  AlertTriangleIcon,
+  PillIcon,
+  CheckIcon,
+  ArrowRightIcon,
+  PlusIcon,
+} from '../components/ui/Icons'
 import api from '../utils/api'
 
 function Checker() {
@@ -14,7 +28,6 @@ function Checker() {
   const [result, setResult]             = useState(null)
   const [loading, setLoading]           = useState(false)
   const [error, setError]               = useState('')
-  const [showOCR, setShowOCR]           = useState(false)
   const [ocrExtractions, setOcrExtractions] = useState([])
   const [ocrMessage, setOcrMessage]     = useState('')
   const [activeTab, setActiveTab]       = useState('manual') // 'manual' | 'ocr'
@@ -85,98 +98,125 @@ function Checker() {
   const SEVERITY_ORDER = ['critical', 'severe', 'moderate', 'mild', 'none', 'unknown']
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-[#F5F9F7] text-[#12302E] flex flex-col relative overflow-hidden font-sans">
+      {/* Background Medical Doodles */}
+      <MedicalDoodleBackground density="normal" />
+
       <Navbar />
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-8">
-        {/* Page title */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white mb-1">Medicine Safety Checker</h1>
-          <p className="text-slate-400 text-sm">Add your medicines to check for interactions, allergy conflicts, and safety concerns.</p>
+      <main className="relative z-10 flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8">
+        {/* Page Title & Header */}
+        <div className="mb-8 border-b border-[#DCE8E5] pb-6">
+          <Badge variant="brand" size="md" icon={ShieldCheckIcon} className="bg-white border-[#DCE8E5] mb-2.5">
+            MEDICATION SAFETY CHECK
+          </Badge>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#12302E] tracking-tight">Medicine Safety Checker</h1>
+          <p className="text-[#64748B] text-sm sm:text-base mt-1">
+            Add your medicines to check for interactions, allergy conflicts, and safety concerns.
+          </p>
         </div>
 
-        {/* Input section */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-6">
-          {/* Tab switcher */}
-          <div className="flex gap-2 mb-5">
+        {/* Search & Scan Input Card */}
+        <Card className="bg-white border-[#DCE8E5] p-6 mb-6 shadow-sm rounded-2xl">
+          {/* Tab Switcher */}
+          <div className="flex gap-2.5 mb-5 border-b border-[#DCE8E5] pb-4">
             <button
               id="tab-manual"
               onClick={() => setActiveTab('manual')}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === 'manual' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === 'manual'
+                  ? 'bg-[#0F766E] text-white shadow-sm'
+                  : 'bg-white text-[#64748B] hover:text-[#12302E] border border-[#DCE8E5] hover:bg-[#EEF6F4]'
+              }`}
             >
-              🔍 Search Medicine
+              <SearchIcon className={`w-4 h-4 ${activeTab === 'manual' ? 'text-white' : 'text-[#0F766E]'}`} />
+              <span>Search Medicine</span>
             </button>
             <button
               id="tab-ocr"
               onClick={() => setActiveTab('ocr')}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === 'ocr' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === 'ocr'
+                  ? 'bg-[#0F766E] text-white shadow-sm'
+                  : 'bg-white text-[#64748B] hover:text-[#12302E] border border-[#DCE8E5] hover:bg-[#EEF6F4]'
+              }`}
             >
-              📄 Scan Prescription
+              <FileTextIcon className={`w-4 h-4 ${activeTab === 'ocr' ? 'text-white' : 'text-[#0F766E]'}`} />
+              <span>Scan Prescription</span>
             </button>
           </div>
 
           {activeTab === 'manual' && (
-            <MedicineSearch
-              onSelect={addMedicine}
-              placeholder="Search by generic or brand name (e.g. paracetamol, aspirin)..."
-              disabled={medicines.length >= 10}
-            />
+            <div>
+              <MedicineSearch
+                onSelect={addMedicine}
+                placeholder="Search by generic or brand name (e.g. paracetamol, aspirin)..."
+                disabled={medicines.length >= 10}
+              />
+            </div>
           )}
 
           {activeTab === 'ocr' && (
             <div>
               <OCRUploader onExtracted={handleOCRExtracted} />
               {ocrMessage && (
-                <p className="text-sm text-slate-400 mt-3">{ocrMessage}</p>
+                <p className="text-sm text-[#64748B] font-medium mt-3">{ocrMessage}</p>
               )}
               {ocrExtractions.length > 0 && (
                 <div className="mt-4 space-y-2">
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Identified medicines — please review and confirm:</p>
+                  <p className="text-xs font-bold text-[#64748B] uppercase tracking-wide">Identified medicines — review & confirm:</p>
                   {ocrExtractions.map((med, i) => (
-                    <div key={i} className="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl px-4 py-3">
+                    <div key={i} className="flex items-center justify-between bg-white border border-[#DCE8E5] rounded-xl px-4 py-3 shadow-sm">
                       <div>
-                        <span className="text-slate-100 text-sm font-medium capitalize">{med.genericName}</span>
-                        {med.strength && <span className="text-slate-400 text-xs ml-2">{med.strength}</span>}
-                        <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
-                          med.confidence >= 80 ? 'bg-green-900/40 text-green-400' :
-                          med.confidence >= 50 ? 'bg-yellow-900/40 text-yellow-400' :
-                          'bg-red-900/40 text-red-400'
+                        <span className="text-[#12302E] text-sm font-bold capitalize">{med.genericName}</span>
+                        {med.strength && <span className="text-[#64748B] text-xs ml-2 font-medium">{med.strength}</span>}
+                        <span className={`ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full border ${
+                          med.confidence >= 80 ? 'bg-emerald-50 text-[#16A34A] border-emerald-200' :
+                          med.confidence >= 50 ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          'bg-rose-50 text-rose-700 border-rose-200'
                         }`}>
                           {med.confidencePercent} confidence
                         </span>
                       </div>
-                      <button
+                      <Button
+                        size="sm"
+                        variant="primary"
                         onClick={() => confirmOCRMedicine(med)}
-                        className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded-lg transition-colors"
+                        icon={PlusIcon}
                       >
-                        + Confirm
-                      </button>
+                        Confirm
+                      </Button>
                     </div>
                   ))}
-                  <p className="text-xs text-amber-400/70">⚠️ Always verify OCR results against your original prescription before adding.</p>
+                  <p className="text-xs text-amber-800 font-medium mt-2 flex items-center gap-1">
+                    <AlertTriangleIcon className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                    Always verify OCR results against your original prescription before checking.
+                  </p>
                 </div>
               )}
             </div>
           )}
-        </div>
+        </Card>
 
         <ErrorBanner message={error} onDismiss={() => setError('')} />
 
-        {/* Current medicine list */}
+        {/* Current Selected Medicines Section */}
         {medicines.length > 0 && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
-                Medicines to Check ({medicines.length})
+          <Card className="bg-white border-[#DCE8E5] p-6 mb-6 shadow-sm rounded-2xl">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#DCE8E5]">
+              <h2 className="text-xs font-bold text-[#64748B] uppercase tracking-wide flex items-center gap-2">
+                <PillIcon className="w-4 h-4 text-[#0F766E]" />
+                Selected Medicines to Check ({medicines.length})
               </h2>
               <button
                 onClick={() => { setMedicines([]); setResult(null) }}
-                className="text-xs text-slate-500 hover:text-red-400 transition-colors"
+                className="text-xs text-[#94A3B8] hover:text-red-600 font-semibold transition-colors cursor-pointer"
               >
                 Clear all
               </button>
             </div>
-            <div className="space-y-2 mb-5">
+
+            <div className="space-y-2.5 mb-6">
               {medicines.map((med) => (
                 <MedicineCard
                   key={med.rxcui}
@@ -185,65 +225,86 @@ function Checker() {
                 />
               ))}
             </div>
-            <button
+
+            <Button
               id="check-interactions-btn"
               onClick={checkInteractions}
               disabled={loading || medicines.length < 2}
-              className="w-full py-3.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              loading={loading}
+              variant="primary"
+              size="lg"
+              className="w-full flex items-center justify-center gap-2 font-bold shadow-sm"
+              icon={loading ? undefined : ArrowRightIcon}
+              iconPosition="right"
             >
-              {loading ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Checking interactions...
-                </>
-              ) : (
-                <>⚡ Check Interactions</>
-              )}
-            </button>
+              Check Medication Safety
+            </Button>
+
             {medicines.length < 2 && (
-              <p className="text-xs text-slate-500 text-center mt-2">Add at least 2 medicines to check</p>
+              <p className="text-xs text-[#94A3B8] text-center mt-2.5 font-medium">
+                Add at least 2 medicines to check interactions.
+              </p>
             )}
-          </div>
+          </Card>
         )}
 
-        {/* Results */}
-        {loading && <LoadingSpinner message="Checking drug interactions..." />}
+        {/* Empty State when no medicines selected */}
+        {medicines.length === 0 && !result && !loading && (
+          <Card className="bg-white border-[#DCE8E5] p-10 text-center shadow-sm rounded-2xl mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-[#EEF6F4] text-[#0F766E] flex items-center justify-center mx-auto mb-3.5 border border-[#DCE8E5]">
+              <ShieldCheckIcon className="w-7 h-7" />
+            </div>
+            <h3 className="text-[#12302E] font-bold text-base">Check your medicines for interactions</h3>
+            <p className="text-[#64748B] text-xs sm:text-sm mt-1 max-w-md mx-auto leading-relaxed">
+              Add two or more medicines by generic or brand name, or scan a prescription image to analyze potential drug-drug interactions, allergy conflicts, and overlapping side effects.
+            </p>
+          </Card>
+        )}
 
+        {/* Loading Spinner State */}
+        {loading && (
+          <Card className="bg-white border-[#DCE8E5] p-12 text-center shadow-sm rounded-2xl mb-6">
+            <LoadingSpinner message="Checking medication safety against FDA labels and RxNorm databases..." />
+          </Card>
+        )}
+
+        {/* Results Display */}
         {result && !loading && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Allergy warnings */}
             {result.allergyWarnings?.length > 0 && (
-              <div className="bg-red-950/40 border border-red-700 rounded-2xl p-5">
-                <h3 className="text-red-300 font-semibold flex items-center gap-2 mb-3">
-                  <span className="text-lg animate-pulse">🚨</span>
-                  Allergy Alert
+              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5 shadow-sm">
+                <h3 className="text-rose-900 font-bold flex items-center gap-2 mb-3 text-sm">
+                  <AlertTriangleIcon className="w-5 h-5 text-rose-600 flex-shrink-0 animate-pulse" />
+                  Allergy Alert Detected
                 </h3>
                 {result.allergyWarnings.map((w, i) => (
                   <div key={i} className="mb-2">
-                    <p className="text-red-200 text-sm font-medium">{w.medicine}</p>
-                    <p className="text-red-300/80 text-xs">{w.message}</p>
+                    <p className="text-rose-950 text-sm font-bold">{w.medicine}</p>
+                    <p className="text-rose-800 text-xs mt-0.5">{w.message}</p>
                   </div>
                 ))}
-                <p className="text-xs text-amber-300/70 mt-2">⚠️ Contact your doctor or pharmacist immediately if you have concerns.</p>
+                <p className="text-xs text-rose-800/80 mt-2 font-medium">⚠️ Contact your doctor or pharmacist immediately if you have concerns.</p>
               </div>
             )}
 
             {/* Duplicate therapy warnings */}
             {result.duplicates?.length > 0 && (
-              <div className="bg-orange-950/30 border border-orange-700 rounded-2xl p-5">
-                <h3 className="text-orange-300 font-semibold flex items-center gap-2 mb-3">
-                  <span>⚠️</span> Possible Duplicate Therapy
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm">
+                <h3 className="text-amber-900 font-bold flex items-center gap-2 mb-3 text-sm">
+                  <AlertTriangleIcon className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                  Possible Duplicate Therapy
                 </h3>
                 {result.duplicates.map((d, i) => (
-                  <div key={i} className="text-sm text-orange-200/80 mb-2">
-                    <span className="font-medium capitalize">{d.medicineA}</span> + <span className="font-medium capitalize">{d.medicineB}</span>
-                    <p className="text-xs text-orange-300/60 mt-0.5">{d.message}</p>
+                  <div key={i} className="text-sm text-amber-900 mb-2">
+                    <span className="font-bold capitalize">{d.medicineA}</span> + <span className="font-bold capitalize">{d.medicineB}</span>
+                    <p className="text-xs text-amber-800 mt-0.5">{d.message}</p>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Overall status */}
+            {/* Overall Status Card */}
             <SafetyStatusCard
               overallSeverity={result.overallSeverity}
               overallSummary={result.overallSummary}
@@ -254,10 +315,10 @@ function Checker() {
               totalInteractions={result.interactions?.length || 0}
             />
 
-            {/* Interaction pairs */}
+            {/* Interaction Pair Details */}
             {result.interactions?.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wide mb-3">
                   Interaction Details ({result.interactions.length})
                 </h3>
                 <div className="space-y-3">
@@ -270,25 +331,30 @@ function Checker() {
               </div>
             )}
 
-            {/* Overlapping effects */}
+            {/* Overlapping Effects */}
             {result.overlappingEffects?.length > 0 && (
-              <div className="bg-slate-900 border border-slate-700 rounded-2xl p-5">
-                <h3 className="text-slate-300 font-semibold mb-3">⚡ Overlapping Effects Detected</h3>
-                <div className="space-y-2">
+              <Card className="bg-white border-[#DCE8E5] rounded-2xl p-5 shadow-sm">
+                <h3 className="text-[#12302E] font-bold text-sm mb-3 flex items-center gap-2">
+                  <ShieldCheckIcon className="w-4 h-4 text-[#0F766E]" />
+                  Overlapping Side Effects Detected
+                </h3>
+                <div className="space-y-2.5">
                   {result.overlappingEffects.map((oe, i) => (
                     <div key={i} className="text-sm">
-                      <span className="text-slate-200 font-medium capitalize">{oe.category} effects</span>
-                      <p className="text-slate-400 text-xs mt-0.5">{oe.message}</p>
+                      <span className="text-[#12302E] font-bold capitalize">{oe.category} effects</span>
+                      <p className="text-[#64748B] text-xs mt-0.5 font-medium">{oe.message}</p>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-amber-400/70 mt-3">{result.overlappingEffects[0]?.disclaimer}</p>
-              </div>
+                <p className="text-xs text-amber-800/80 font-medium mt-3">{result.overlappingEffects[0]?.disclaimer}</p>
+              </Card>
             )}
 
-            <p className="text-xs text-slate-600 text-center">
-              {result.disclaimer}
-            </p>
+            {/* Disclaimer Box */}
+            <div className="bg-amber-50/80 border border-amber-200 text-amber-900 rounded-xl p-4 text-xs leading-relaxed flex items-start gap-2.5 shadow-sm">
+              <AlertTriangleIcon className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+              <span>{result.disclaimer || 'This tool is for informational purposes only. Always consult your healthcare provider before taking or altering any medications.'}</span>
+            </div>
           </div>
         )}
       </main>

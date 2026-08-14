@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../utils/api'
+import { SearchIcon, PillIcon } from './ui/Icons'
 
 /**
  * MedicineSearch — Autocomplete medicine search input.
@@ -65,7 +66,9 @@ function MedicineSearch({ onSelect, placeholder = 'Search medicine (e.g. aspirin
   return (
     <div ref={wrapperRef} className="relative w-full">
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8]">
+          <SearchIcon className="w-4 h-4" />
+        </span>
         <input
           id="medicine-search-input"
           type="text"
@@ -74,36 +77,38 @@ function MedicineSearch({ onSelect, placeholder = 'Search medicine (e.g. aspirin
           placeholder={placeholder}
           disabled={disabled}
           autoComplete="off"
-          className="w-full pl-9 pr-4 py-3 bg-slate-800 border border-slate-700 text-slate-100 rounded-xl text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all disabled:opacity-50"
+          className="w-full pl-10 pr-4 py-3 bg-white border border-[#DCE8E5] text-[#12302E] rounded-xl text-sm placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0F766E] focus:border-transparent transition-all shadow-sm disabled:opacity-50"
         />
         {loading && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+            <div className="w-4 h-4 border-2 border-[#0F766E] border-t-transparent rounded-full animate-spin" />
           </div>
         )}
       </div>
 
-      {error && <p className="text-xs text-red-400 mt-1 px-1">{error}</p>}
+      {error && <p className="text-xs text-red-600 mt-1 px-1">{error}</p>}
 
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl shadow-xl overflow-hidden max-h-64 overflow-y-auto">
+        <ul className="absolute z-50 w-full mt-1 bg-white border border-[#DCE8E5] rounded-xl shadow-xl overflow-hidden max-h-64 overflow-y-auto">
           {suggestions.map((med, i) => (
             <li key={`${med.rxcui}-${i}`}>
               <button
                 id={`medicine-suggestion-${i}`}
                 onClick={() => handleSelect(med)}
-                className="w-full text-left px-4 py-3 hover:bg-slate-700 transition-colors flex items-center gap-3 border-b border-slate-700/50 last:border-0"
+                className="w-full text-left px-4 py-3 hover:bg-[#EEF6F4] transition-colors flex items-center gap-3 border-b border-[#DCE8E5]/60 last:border-0 cursor-pointer"
               >
-                <span className="text-teal-400 text-xs">💊</span>
+                <div className="w-7 h-7 rounded-lg bg-[#EEF6F4] text-[#0F766E] flex items-center justify-center border border-[#DCE8E5] flex-shrink-0">
+                  <PillIcon className="w-3.5 h-3.5" />
+                </div>
                 <div>
-                  <p className="text-slate-100 text-sm font-medium capitalize">
+                  <p className="text-[#12302E] text-sm font-bold capitalize">
                     {med.genericName}
                   </p>
                   {med.brandName && (
-                    <p className="text-slate-400 text-xs">{med.brandName}</p>
+                    <p className="text-[#64748B] text-xs font-medium">{med.brandName}</p>
                   )}
                 </div>
-                <span className="ml-auto text-xs text-slate-500 flex-shrink-0">RXCUI: {med.rxcui}</span>
+                <span className="ml-auto text-xs text-[#94A3B8] font-medium flex-shrink-0">RXCUI: {med.rxcui}</span>
               </button>
             </li>
           ))}
@@ -111,9 +116,9 @@ function MedicineSearch({ onSelect, placeholder = 'Search medicine (e.g. aspirin
       )}
 
       {open && suggestions.length === 0 && !loading && query.length >= 2 && (
-        <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl p-4 text-center">
-          <p className="text-slate-400 text-sm">No medicines found for "{query}"</p>
-          <p className="text-slate-500 text-xs mt-1">Try a different spelling or generic name.</p>
+        <div className="absolute z-50 w-full mt-1 bg-white border border-[#DCE8E5] rounded-xl p-4 text-center shadow-xl">
+          <p className="text-[#12302E] text-sm font-semibold">No medicines found for "{query}"</p>
+          <p className="text-[#64748B] text-xs mt-1">Try a different spelling or generic name.</p>
         </div>
       )}
     </div>
