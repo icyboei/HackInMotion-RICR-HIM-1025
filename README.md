@@ -189,15 +189,36 @@ This application is built with patient safety as the first priority:
 
 ---
 
-## Testing
+## Testing & Production Build
 
 ```bash
-# Frontend build test
+# Frontend production build test
 cd frontend && npm run build
 
-# Backend module test
-cd backend && node -e "require('dotenv').config(); require('./server.js')"
+# Backend startup & health check
+cd backend && npm start
+curl http://localhost:5000/health
 ```
+
+---
+
+## Production Deployment Guide
+
+### Architecture
+- **Frontend**: Deployed on **Vercel** (`frontend/`) with `vercel.json` SPA rewrites.
+- **Backend**: Deployed on **Render** (`backend/`) with automated `/health` endpoint monitoring.
+- **Database**: **MongoDB Atlas** (with fallback in-memory store).
+
+### Environment Variables Matrix
+
+| Variable | Scope | Purpose |
+|----------|-------|---------|
+| `VITE_API_URL` | Frontend (Vercel) | Base URL of deployed Render backend |
+| `MONGODB_URI` | Backend (Render) | MongoDB Atlas connection string |
+| `JWT_SECRET` | Backend (Render) | Secret key for signing user JWT tokens |
+| `FRONTEND_URL` | Backend (Render) | Deployed Vercel frontend URL for CORS |
+| `GEMINI_API_KEY` | Backend (Render) | Optional Gemini API key for AI assistant |
+| `PORT` | Backend (Render) | Provided automatically by cloud host |
 
 ---
 
