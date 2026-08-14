@@ -204,9 +204,14 @@ curl http://localhost:5000/health
 
 ## Production Deployment Guide
 
+### Live Production Deployments
+- **Frontend App**: [https://hack-in-motion-ricr-him-1025-q5z4kvefl-icyboeis-projects.vercel.app](https://hack-in-motion-ricr-him-1025-q5z4kvefl-icyboeis-projects.vercel.app)
+- **Backend API**: [https://hackinmotion-ricr-him-1025.onrender.com](https://hackinmotion-ricr-him-1025.onrender.com)
+- **Health Check**: [https://hackinmotion-ricr-him-1025.onrender.com/health](https://hackinmotion-ricr-him-1025.onrender.com/health)
+
 ### Architecture
 - **Frontend**: Deployed on **Vercel** (`frontend/`) with `vercel.json` SPA rewrites.
-- **Backend**: Deployed on **Render** (`backend/`) with automated `/health` endpoint monitoring.
+- **Backend**: Deployed on **Render** (`backend/`) (Service ID: `srv-d9viqc9t0dsc73d8s5t0`) with automated `/health` endpoint monitoring.
 - **Database**: **MongoDB Atlas** (with fallback in-memory store).
 
 ### Environment Variables Matrix

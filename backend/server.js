@@ -22,6 +22,7 @@ const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  "https://hack-in-motion-ricr-him-1025-q5z4kvefl-icyboeis-projects.vercel.app",
   "http://localhost:5173",
   "http://localhost:5174",
   "http://127.0.0.1:5173",
@@ -32,7 +33,7 @@ app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, curl, postman)
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
         return callback(null, true);
       }
       return callback(null, true); // Fallback allow in dev
