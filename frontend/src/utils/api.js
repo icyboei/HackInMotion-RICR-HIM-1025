@@ -40,7 +40,7 @@ async function handleResponse(res) {
 
 function catchNetworkError(err) {
   if (err.name === "TypeError" && err.message === "Failed to fetch") {
-    throw new Error("Unable to connect to backend server. Please verify the backend service is running on http://localhost:5000.");
+    throw new Error("Unable to connect to backend server. Please verify the service is running and accessible.");
   }
   throw err;
 }
