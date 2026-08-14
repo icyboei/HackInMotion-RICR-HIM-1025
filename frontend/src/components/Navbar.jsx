@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { MedicalCrossIcon, MenuIcon, CloseIcon, LogOutIcon } from './ui/Icons'
 
+/**
+ * Navbar.jsx — Clinical Health-Tech Design System Foundation
+ * Preserves all routes, auth state, and mobile functionality.
+ */
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { isAuthenticated, user, logout } = useAuth()
@@ -29,35 +34,56 @@ function Navbar() {
       ]
 
   return (
-    <header className="sticky top-0 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 z-50">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <header className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-[#DCE8E5] z-50 shadow-xs">
+      <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
 
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl text-teal-400 no-underline flex-shrink-0">
-          <span className="text-2xl">✚</span>
-          <span>MediSafe</span>
+        {/* Brand Logo */}
+        <Link to="/" className="flex items-center gap-2.5 font-extrabold text-xl text-[#0F766E] no-underline flex-shrink-0 group">
+          <div className="w-8 h-8 rounded-lg bg-[#0F766E] text-white flex items-center justify-center shadow-xs group-hover:bg-[#115E59] transition-colors">
+            <MedicalCrossIcon className="w-5 h-5" />
+          </div>
+          <span className="tracking-tight text-[#12302E]">Medi<span className="text-[#0F766E]">Safe</span></span>
         </Link>
 
-        {/* Desktop nav links */}
-        <nav className="hidden md:flex gap-6">
+        {/* Desktop Nav Links */}
+        <nav className="hidden md:flex gap-7 items-center">
           {navLinks.map((link) => (
             link.hash
-              ? <a key={link.label} href={link.to} className="text-slate-400 text-sm font-medium hover:text-teal-400 transition-colors no-underline">{link.label}</a>
-              : <Link key={link.label} to={link.to} className="text-slate-400 text-sm font-medium hover:text-teal-400 transition-colors no-underline">{link.label}</Link>
+              ? (
+                <a
+                  key={link.label}
+                  href={link.to}
+                  className="text-[#64748B] text-sm font-semibold hover:text-[#0F766E] transition-colors no-underline"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.label}
+                  to={link.to}
+                  className="text-[#64748B] text-sm font-semibold hover:text-[#0F766E] transition-colors no-underline"
+                >
+                  {link.label}
+                </Link>
+              )
           ))}
         </nav>
 
-        {/* Desktop auth buttons */}
+        {/* Desktop Auth Buttons */}
         <div className="hidden md:flex gap-3 items-center">
           {isAuthenticated ? (
             <>
-              <span className="text-xs text-slate-500 font-medium">{user?.name}</span>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#EEF6F4] text-xs font-semibold text-[#0F766E] border border-[#DCE8E5]">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{user?.name}</span>
+              </div>
               <button
                 id="logout-btn"
                 onClick={handleLogout}
-                className="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-teal-400 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-[#64748B] hover:text-[#DC2626] transition-colors cursor-pointer"
               >
-                Log Out
+                <LogOutIcon className="w-4 h-4" />
+                <span>Log Out</span>
               </button>
             </>
           ) : (
@@ -65,14 +91,14 @@ function Navbar() {
               <Link
                 id="login-link"
                 to="/login"
-                className="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-teal-400 transition-colors no-underline"
+                className="px-4.5 py-2 text-sm font-semibold text-[#0F766E] hover:bg-[#EEF6F4] rounded-xl transition-colors no-underline border border-transparent"
               >
                 Log In
               </Link>
               <Link
                 id="signup-link"
                 to="/signup"
-                className="px-4 py-2 text-sm font-semibold bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors no-underline"
+                className="px-5 py-2 text-sm font-semibold bg-[#0F766E] text-white rounded-xl hover:bg-[#115E59] transition-colors no-underline shadow-xs hover:shadow"
               >
                 Sign Up
               </Link>
@@ -80,35 +106,68 @@ function Navbar() {
           )}
         </div>
 
-        {/* Mobile hamburger */}
+        {/* Mobile Hamburger */}
         <button
-          className="md:hidden text-2xl bg-transparent border-none cursor-pointer text-slate-400"
+          className="md:hidden p-2 rounded-lg text-[#64748B] hover:text-[#12302E] hover:bg-[#EEF6F4] transition-colors cursor-pointer border-none"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
           id="mobile-menu-btn"
         >
-          {menuOpen ? '✕' : '☰'}
+          {menuOpen ? <CloseIcon className="w-6 h-6" /> : <MenuIcon className="w-6 h-6" />}
         </button>
       </div>
 
-      {/* Mobile dropdown */}
+      {/* Mobile Dropdown */}
       {menuOpen && (
-        <div className="md:hidden bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-col gap-4">
+        <div className="md:hidden bg-white border-b border-[#DCE8E5] px-6 py-4 flex flex-col gap-3 shadow-md animate-in slide-in-from-top-2 duration-200">
           {navLinks.map((link) => (
             link.hash
-              ? <a key={link.label} href={link.to} onClick={() => setMenuOpen(false)} className="text-slate-300 text-sm font-medium no-underline">{link.label}</a>
-              : <Link key={link.label} to={link.to} onClick={() => setMenuOpen(false)} className="text-slate-300 text-sm font-medium no-underline">{link.label}</Link>
+              ? (
+                <a
+                  key={link.label}
+                  href={link.to}
+                  onClick={() => setMenuOpen(false)}
+                  className="text-[#12302E] text-sm font-semibold py-1.5 no-underline hover:text-[#0F766E]"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.label}
+                  to={link.to}
+                  onClick={() => setMenuOpen(false)}
+                  className="text-[#12302E] text-sm font-semibold py-1.5 no-underline hover:text-[#0F766E]"
+                >
+                  {link.label}
+                </Link>
+              )
           ))}
-          <div className="flex gap-3 pt-2 border-t border-slate-800">
+          <div className="flex flex-col gap-2 pt-3 border-t border-[#DCE8E5]">
             {isAuthenticated ? (
-              <button onClick={handleLogout} className="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-teal-400 transition-colors">
-                Log Out
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 py-2 text-sm font-semibold text-[#DC2626] bg-red-50 rounded-xl"
+              >
+                <LogOutIcon className="w-4 h-4" />
+                <span>Log Out ({user?.name})</span>
               </button>
             ) : (
-              <>
-                <Link to="/login" onClick={() => setMenuOpen(false)} className="px-4 py-2 text-sm font-semibold text-slate-400 no-underline">Log In</Link>
-                <Link to="/signup" onClick={() => setMenuOpen(false)} className="px-4 py-2 text-sm font-semibold bg-teal-600 text-white rounded-xl no-underline">Sign Up</Link>
-              </>
+              <div className="flex gap-2">
+                <Link
+                  to="/login"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex-1 text-center py-2 text-sm font-semibold text-[#0F766E] bg-[#EEF6F4] rounded-xl no-underline"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/signup"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex-1 text-center py-2 text-sm font-semibold bg-[#0F766E] text-white rounded-xl no-underline"
+                >
+                  Sign Up
+                </Link>
+              </div>
             )}
           </div>
         </div>

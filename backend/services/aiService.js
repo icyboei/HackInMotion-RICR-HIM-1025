@@ -19,9 +19,6 @@
 const https = require("https");
 const { DrugDataProvider } = require("./drugDataProvider");
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
 // ─── Medicine detection ───────────────────────────────────────────────────────
 
 /** Detect medicine names mentioned in a question using a simple keyword approach */
@@ -98,6 +95,9 @@ function postJSON(url, body) {
       let response = "";
       res.on("data", (chunk) => (response += chunk));
       res.on("end", () => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          return reject(new Error(`Gemini HTTP ${res.statusCode}: ${response}`));
+        }
         try { resolve(JSON.parse(response)); }
         catch { reject(new Error("Invalid JSON from Gemini")); }
       });
@@ -110,6 +110,14 @@ function postJSON(url, body) {
 }
 
 async function callGemini(systemPrompt, userMessage) {
+  const apiKey = process.env.GEMINI_API_KEY || "";
+  const models = [
+    process.env.GEMINI_MODEL,
+    "gemini-3.6-flash",
+    "gemini-2.5-flash",
+    "gemini-flash-latest",
+  ].filter(Boolean);
+
   const body = {
     contents: [
       {
@@ -119,12 +127,24 @@ async function callGemini(systemPrompt, userMessage) {
     ],
     generationConfig: {
       temperature: 0.3,
-      maxOutputTokens: 800,
+      maxOutputTokens: 2048,
     },
   };
 
-  const response = await postJSON(GEMINI_URL, body);
-  return response?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  let lastError = null;
+  for (const model of models) {
+    try {
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await postJSON(geminiUrl, body);
+      const text = response?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) return text;
+    } catch (err) {
+      lastError = err;
+      console.warn(`Gemini model ${model} failed (${err.message}). Trying fallback...`);
+    }
+  }
+
+  throw lastError || new Error("All Gemini model endpoints failed");
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -186,8 +206,9 @@ const AIService = {
     // Step 3: Call LLM (or stub if no key)
     let rawAnswer = "";
     let dataSourced = detectedMedicines.length > 0 && drugContext.length > 0;
+    const apiKey = process.env.GEMINI_API_KEY || "";
 
-    if (!GEMINI_API_KEY) {
+    if (!apiKey) {
       // Stub response when no API key
       rawAnswer = `I'm sorry, the AI assistant requires an API key to be configured. 
 

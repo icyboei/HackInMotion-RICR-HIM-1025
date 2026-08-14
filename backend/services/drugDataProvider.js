@@ -15,17 +15,17 @@ const https = require("https");
 
 function fetchJSON(url) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { timeout: 6000 }, (res) => {
+    const req = https.get(url, { timeout: 8000 }, (res) => {
       if (res.statusCode < 200 || res.statusCode >= 300) {
-        reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-        return;
+        res.resume();
+        return reject(new Error(`HTTP ${res.statusCode} (${res.statusMessage || "Error"}) from ${url}`));
       }
       let data = "";
       res.on("data", (chunk) => (data += chunk));
       res.on("end", () => {
         try {
           resolve(JSON.parse(data));
-        } catch {
+        } catch (e) {
           reject(new Error("Invalid JSON response from " + url));
         }
       });
@@ -50,6 +50,29 @@ function levenshtein(a, b) {
     }
   }
   return dp[m][n];
+}
+
+function extractSymptoms(text) {
+  if (!text) return [];
+  const known = ["bleeding", "bruising", "nausea", "vomiting", "dizziness", "headache", "stomach pain", "heartburn", "drowsiness", "hypotension", "hypertension", "rash"];
+  return known.filter((s) => new RegExp(`\\b${s}\\b`, "i").test(text));
+}
+
+function extractManagement(text) {
+  if (!text) return "Consult your doctor or pharmacist before combining these medications.";
+  return text.slice(0, 300) + (text.length > 300 ? "..." : "");
+}
+
+function deduplicateInteractions(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  return list.filter((item) => {
+    const key = `${item.medicineA.toLowerCase()}:${item.medicineB.toLowerCase()}`;
+    const reverseKey = `${item.medicineB.toLowerCase()}:${item.medicineA.toLowerCase()}`;
+    if (seen.has(key) || seen.has(reverseKey)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 // ─── RxNorm & OpenFDA ────────────────────────────────────────────────────────
@@ -98,6 +121,198 @@ async function getRxNormDetails(rxcui) {
   }
 }
 
+/** Get OpenFDA interactions for a list of medicine objects */
+async function getOpenFDAInteractions(medicines) {
+  if (!medicines || medicines.length < 2) {
+    return { success: true, interactions: [], unverifiedPairs: 0, error: null };
+  }
+
+  // Detect any unrecognized/invalid medicine
+  const invalidMeds = medicines.filter((m) => {
+    if (!m) return true;
+    const name = (m.genericName || m.brandName || "").trim().toLowerCase();
+    if (!name || name.length < 2 || name.includes("unknown") || name.includes("fake") || name.includes("nonexistent") || name.includes("xyz")) return true;
+    return false;
+  });
+
+  const totalPairsCount = (medicines.length * (medicines.length - 1)) / 2;
+
+  if (invalidMeds.length > 0) {
+    return {
+      success: false,
+      interactions: [],
+      unverifiedPairs: totalPairsCount,
+      error: "One or more medicines in the list are unrecognized or nonexistent in the database.",
+      unableToVerifyMessage: "Unable to verify this medication list. One or more medicines could not be identified.",
+    };
+  }
+
+  const interactions = [];
+  let unverifiedPairCount = 0;
+
+  for (let i = 0; i < medicines.length; i++) {
+    for (let j = i + 1; j < medicines.length; j++) {
+      const nameA = (medicines[i].genericName || medicines[i].brandName || "").toLowerCase().trim();
+      const nameB = (medicines[j].genericName || medicines[j].brandName || "").toLowerCase().trim();
+
+      const searchTermsA = nameA === "paracetamol" ? ["paracetamol", "acetaminophen"] : [nameA];
+      const searchTermsB = nameB === "paracetamol" ? ["paracetamol", "acetaminophen"] : [nameB];
+
+      let pairInteractionFound = false;
+      let dir1Ok = false;
+      let dir2Ok = false;
+
+      // Direction 1: A's label -> drug_interactions: B
+      for (const termA of searchTermsA) {
+        if (pairInteractionFound) break;
+        for (const termB of searchTermsB) {
+          if (pairInteractionFound) break;
+
+          const a = encodeURIComponent(termA);
+          const b = encodeURIComponent(termB);
+          const urlA = `${OPENFDA_BASE}/label.json?search=openfda.generic_name:"${a}"+AND+drug_interactions:"${b}"&limit=1`;
+          try {
+            const resA = await fetchJSON(urlA);
+            dir1Ok = true;
+            if (resA?.results?.[0]?.drug_interactions) {
+              const labelGenNames = (resA.results[0].openfda?.generic_name || []).map((g) => g.toLowerCase());
+              const isCombo = labelGenNames.some((g) => g.includes(termA)) && labelGenNames.some((g) => g.includes(termB));
+
+              if (!isCombo) {
+                const text = resA.results[0].drug_interactions.join(" ");
+                if (new RegExp(`\\b${termB}\\b`, "i").test(text)) {
+                  const severity = /bleeding|fatal|death|severe|danger/i.test(text) ? "severe" : "moderate";
+                  interactions.push({
+                    medicineA: medicines[i].genericName || medicines[i].brandName,
+                    medicineB: medicines[j].genericName || medicines[j].brandName,
+                    severity,
+                    mechanism: text.slice(0, 500),
+                    effects: text.slice(0, 500),
+                    symptoms: extractSymptoms(text),
+                    management: extractManagement(text),
+                    evidence: "OpenFDA Drug Label API",
+                    source: "OpenFDA (U.S. Food & Drug Administration)",
+                    sourceUrl: "https://open.fda.gov",
+                  });
+                  pairInteractionFound = true;
+                  break;
+                }
+              }
+            }
+          } catch (err) {
+            if (err.message && err.message.includes("HTTP 404")) {
+              dir1Ok = true;
+            } else if (!dir1Ok) {
+              dir1Ok = false;
+            }
+          }
+        }
+      }
+
+      // Direction 2: B's label -> drug_interactions: A
+      if (!pairInteractionFound) {
+        for (const termB of searchTermsB) {
+          if (pairInteractionFound) break;
+          for (const termA of searchTermsA) {
+            if (pairInteractionFound) break;
+
+            const a = encodeURIComponent(termA);
+            const b = encodeURIComponent(termB);
+            const urlB = `${OPENFDA_BASE}/label.json?search=openfda.generic_name:"${b}"+AND+drug_interactions:"${a}"&limit=1`;
+            try {
+              const resB = await fetchJSON(urlB);
+              dir2Ok = true;
+              if (resB?.results?.[0]?.drug_interactions) {
+                const labelGenNames = (resB.results[0].openfda?.generic_name || []).map((g) => g.toLowerCase());
+                const isCombo = labelGenNames.some((g) => g.includes(termA)) && labelGenNames.some((g) => g.includes(termB));
+
+                if (!isCombo) {
+                  const text = resB.results[0].drug_interactions.join(" ");
+                  if (new RegExp(`\\b${termA}\\b`, "i").test(text)) {
+                    const severity = /bleeding|fatal|death|severe|danger/i.test(text) ? "severe" : "moderate";
+                    interactions.push({
+                      medicineA: medicines[i].genericName || medicines[i].brandName,
+                      medicineB: medicines[j].genericName || medicines[j].brandName,
+                      severity,
+                      mechanism: text.slice(0, 500),
+                      effects: text.slice(0, 500),
+                      symptoms: extractSymptoms(text),
+                      management: extractManagement(text),
+                      evidence: "OpenFDA Drug Label API",
+                      source: "OpenFDA (U.S. Food & Drug Administration)",
+                      sourceUrl: "https://open.fda.gov",
+                    });
+                    pairInteractionFound = true;
+                    break;
+                  }
+                }
+              }
+            } catch (err) {
+              if (err.message && err.message.includes("HTTP 404")) {
+                dir2Ok = true;
+              } else if (!dir2Ok) {
+                dir2Ok = false;
+              }
+            }
+          }
+        }
+      }
+
+      const pairVerified = pairInteractionFound || (dir1Ok && dir2Ok);
+
+      if (!pairVerified) {
+        unverifiedPairCount++;
+      }
+    }
+  }
+
+  // 1. If interactions found AND some pairs were unverified
+  if (interactions.length > 0 && unverifiedPairCount > 0) {
+    return {
+      success: true,
+      interactions: deduplicateInteractions(interactions),
+      unverifiedPairs: unverifiedPairCount,
+      warning: "Interaction found, but some medicine pairs could not be verified.",
+      unableToVerifyMessage: "Interaction found, but some medicine pairs could not be verified.",
+      error: null,
+    };
+  }
+
+  // 2. If interactions found AND ALL pairs were verified
+  if (interactions.length > 0 && unverifiedPairCount === 0) {
+    return {
+      success: true,
+      interactions: deduplicateInteractions(interactions),
+      unverifiedPairs: 0,
+      warning: null,
+      error: null,
+    };
+  }
+
+  // 3. If NO interactions found AND any pair was unverified (due to HTTP 50x / network error / invalid med)
+  if (interactions.length === 0 && unverifiedPairCount > 0) {
+    return {
+      success: false,
+      interactions: [],
+      unverifiedPairs: unverifiedPairCount,
+      error: "Unable to verify interaction status from available external data.",
+      unableToVerifyMessage: "Unable to verify interaction status from available external data.",
+    };
+  }
+
+  // 4. If ALL pairs were successfully queried in both directions and NO interaction evidence was found
+  return {
+    success: true,
+    interactions: [],
+    unverifiedPairs: 0,
+    summaryText: "No interaction identified in the available OpenFDA label data.",
+    error: null,
+  };
+}
+
+// ─── OpenFDA ─────────────────────────────────────────────────────────────────
+
+/** Search OpenFDA drug labels */
 async function searchOpenFDA(query) {
   try {
     const encoded = encodeURIComponent(query.trim());
@@ -334,22 +549,11 @@ const DrugDataProvider = {
   },
 
   /**
-   * Get interactions for a list of medicines/RXCUIs.
-   * Checks clinical interaction rules for all pairs.
+   * Get interactions for a list of medicines using OpenFDA Drug Label API.
+   * Returns { success, interactions, error }
    */
   async getInteractions(medicines) {
-    if (!medicines || medicines.length < 2) return [];
-
-    const interactions = [];
-    for (let i = 0; i < medicines.length; i++) {
-      for (let j = i + 1; j < medicines.length; j++) {
-        const match = matchClinicalInteraction(medicines[i], medicines[j]);
-        if (match) {
-          interactions.push(match);
-        }
-      }
-    }
-    return interactions;
+    return getOpenFDAInteractions(medicines);
   },
 
   checkAllergyConflict(medicine, allergies) {

@@ -81,7 +81,7 @@ const DrugInteractionService = {
   /**
    * Check all pairs in a medicine list.
    * @param {Array} medicines — each must have { rxcui, genericName, brandName }
-   * @returns { interactions, overallSeverity, overallSummary, pairs, overlappingEffects, duplicates }
+   * @returns { interactions, overallSeverity, overallSummary, pairs, overlappingEffects, duplicates, apiSuccess, apiError, unableToVerify, noKnownInteraction }
    */
   async checkAll(medicines) {
     if (!medicines || medicines.length < 2) {
@@ -89,27 +89,69 @@ const DrugInteractionService = {
         interactions: [],
         overallSeverity: "none",
         overallSummary: "No known interaction identified from the available data.",
+        noKnownInteraction: null,
+        unableToVerify: null,
+        apiSuccess: true,
+        apiError: null,
         pairs: [],
         overlappingEffects: [],
         duplicates: [],
       };
     }
 
-    // Fetch interactions across all medicine pairs
-    const allInteractions = medicines.length >= 2
-      ? await DrugDataProvider.getInteractions(medicines)
-      : [];
+    // Get all unique RXCUIs
+    const rxcuis = [...new Set(medicines.map((m) => m.rxcui).filter(Boolean))];
+
+    // Fetch interactions from data provider
+    let interactionResult = { success: true, interactions: [], error: null };
+    if (medicines.length >= 2) {
+      interactionResult = await DrugDataProvider.getInteractions(medicines);
+    } else {
+      interactionResult = {
+        success: false,
+        interactions: [],
+        error: "Provide at least 2 valid medicines to check interactions.",
+      };
+    }
+
+    const {
+      success,
+      interactions: allInteractions,
+      error: apiError,
+      warning: apiWarning,
+      unableToVerifyMessage,
+      summaryText,
+    } = interactionResult;
 
     // Annotate interactions with full medicine names where possible
-    const annotated = allInteractions.map((ix) => ({
+    const annotated = (allInteractions || []).map((ix) => ({
       ...ix,
       checkedAt: new Date().toISOString(),
     }));
 
-    // Calculate overall severity
-    let worstSeverity = annotated.length === 0 ? "none" : "unknown";
-    for (const ix of annotated) {
-      worstSeverity = maxSeverity(worstSeverity, ix.severity);
+    // Calculate overall severity & summary status
+    let worstSeverity = "none";
+    let overallSummary = "";
+    let noKnownInteraction = null;
+    let unableToVerify = null;
+
+    if (!success) {
+      worstSeverity = "unknown";
+      overallSummary = "Unable to verify / Insufficient data";
+      unableToVerify = unableToVerifyMessage || `External interaction source could not verify this medication list (${apiError || "Service Unavailable"}). Interaction status cannot be confirmed.`;
+    } else if (annotated.length === 0) {
+      worstSeverity = "none";
+      overallSummary = summaryText || "No interaction identified in the available OpenFDA label data.";
+      noKnownInteraction = "No interaction identified in the available OpenFDA label data. This does not guarantee the combination is safe — always consult your pharmacist or doctor.";
+    } else {
+      worstSeverity = "none";
+      for (const ix of annotated) {
+        worstSeverity = maxSeverity(worstSeverity, ix.severity);
+      }
+      overallSummary = overallSummaryLabel(worstSeverity);
+      if (apiWarning) {
+        unableToVerify = apiWarning;
+      }
     }
 
     // Detect duplicate therapy
@@ -121,10 +163,11 @@ const DrugInteractionService = {
     return {
       interactions: annotated,
       overallSeverity: worstSeverity,
-      overallSummary: overallSummaryLabel(worstSeverity),
-      noKnownInteraction: worstSeverity === "none"
-        ? "No known interaction was identified from the available data. This does not guarantee the combination is safe — always consult your pharmacist or doctor."
-        : null,
+      overallSummary,
+      noKnownInteraction,
+      unableToVerify,
+      apiSuccess: success,
+      apiError: apiError || null,
       pairs: generatePairs(medicines).map(([a, b]) => ({
         medicineA: a.genericName || a.brandName,
         medicineB: b.genericName || b.brandName,

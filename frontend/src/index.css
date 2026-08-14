@@ -1,6 +1,21 @@
 @import "tailwindcss";
 
-/* ── Google Fonts loaded in index.html ──────────────────────────────────── */
+@theme {
+  --color-bg-primary: #F5F9F7;
+  --color-surface-main: #FFFFFF;
+  --color-surface-secondary: #EEF6F4;
+  --color-brand-primary: #0F766E;
+  --color-brand-dark: #115E59;
+  --color-brand-accent: #14B8A6;
+  --color-text-main: #12302E;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
+  --color-border-main: #DCE8E5;
+  --color-status-success: #16A34A;
+  --color-status-warning: #D97706;
+  --color-status-danger: #DC2626;
+  --color-status-critical: #B91C1C;
+}
 
 @layer base {
   *,
@@ -10,41 +25,40 @@
   }
 
   body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background-color: #020617; /* slate-950 */
-    color: #f1f5f9;             /* slate-100 */
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #F5F9F7;
+    color: #12302E;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
   }
 
   a {
     color: inherit;
   }
 
-  /* Smooth scrolling for hash anchors */
   html {
     scroll-behavior: smooth;
   }
 
-  /* Custom scrollbar */
+  /* Clinical custom scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #0f172a;
+    background: #F5F9F7;
   }
   ::-webkit-scrollbar-thumb {
-    background: #334155;
-    border-radius: 3px;
+    background: #CBD5E1;
+    border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #475569;
+    background: #94A3B8;
   }
 }
 
 @layer utilities {
-  /* Text clamping utilities */
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -56,5 +70,12 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  .clinical-shadow {
+    box-shadow: 0 4px 20px -2px rgba(18, 48, 46, 0.04), 0 2px 6px -1px rgba(18, 48, 46, 0.02);
+  }
+  .clinical-shadow-lg {
+    box-shadow: 0 10px 30px -4px rgba(18, 48, 46, 0.06), 0 4px 12px -2px rgba(18, 48, 46, 0.03);
   }
 }

@@ -44,7 +44,11 @@ async function checkInteractions(req, res) {
     const interactionResult = await DrugInteractionService.checkAll(validMedicines);
 
     // Run cross-check
-    const crossCheckResult = await CrossCheckService.verify(interactionResult.interactions);
+    const crossCheckResult = await CrossCheckService.verify(
+      interactionResult.interactions,
+      validMedicines,
+      interactionResult.apiSuccess
+    );
 
     // Store history if user is logged in
     if (req.user) {

@@ -4,7 +4,7 @@ import CrossCheckBadge from './CrossCheckBadge'
 /**
  * SafetyStatusCard — Overall safety summary for a medication list
  */
-function SafetyStatusCard({ overallSeverity, overallSummary, noKnownInteraction, crossCheck, totalMedicines, totalInteractions }) {
+function SafetyStatusCard({ overallSeverity, overallSummary, noKnownInteraction, unableToVerify, crossCheck, totalMedicines, totalInteractions }) {
   return (
     <div className="rounded-2xl border border-slate-700 bg-slate-800/50 p-6">
       <div className="flex items-start justify-between gap-4 mb-4">
@@ -26,6 +26,12 @@ function SafetyStatusCard({ overallSeverity, overallSummary, noKnownInteraction,
       {noKnownInteraction && (
         <p className="text-sm text-green-300/80 bg-green-950/30 border border-green-800/50 rounded-xl px-4 py-3 mb-4">
           ✓ {noKnownInteraction}
+        </p>
+      )}
+
+      {unableToVerify && (
+        <p className="text-sm text-amber-300/80 bg-amber-950/30 border border-amber-800/50 rounded-xl px-4 py-3 mb-4">
+          ⚠️ {unableToVerify}
         </p>
       )}
 

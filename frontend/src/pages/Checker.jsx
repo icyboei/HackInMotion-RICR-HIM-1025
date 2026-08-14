@@ -248,6 +248,7 @@ function Checker() {
               overallSeverity={result.overallSeverity}
               overallSummary={result.overallSummary}
               noKnownInteraction={result.noKnownInteraction}
+              unableToVerify={result.unableToVerify}
               crossCheck={result.crossCheck}
               totalMedicines={medicines.length}
               totalInteractions={result.interactions?.length || 0}

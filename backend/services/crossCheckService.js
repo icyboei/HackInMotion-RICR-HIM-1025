@@ -64,24 +64,49 @@ const CrossCheckService = {
   /**
    * Cross-check the primary interaction results against OpenFDA FAERS.
    * @param {Array} interactions — from DrugInteractionService
+   * @param {Array} medicines — input medication list
+   * @param {boolean} primarySuccess — whether primary RxNorm check succeeded
    * @returns { status, details, disclaimer }
    */
-  async verify(interactions) {
-    if (!interactions || interactions.length === 0) {
+  async verify(interactions, medicines = [], primarySuccess = true) {
+    let pairsToCheck = [];
+    if (interactions && interactions.length > 0) {
+      pairsToCheck = interactions.map((ix) => ({
+        medicineA: ix.medicineA,
+        medicineB: ix.medicineB,
+        primarySeverity: ix.severity,
+      }));
+    } else if (medicines && medicines.length >= 2) {
+      for (let i = 0; i < medicines.length; i++) {
+        for (let j = i + 1; j < medicines.length; j++) {
+          const medA = medicines[i].genericName || medicines[i].brandName || "";
+          const medB = medicines[j].genericName || medicines[j].brandName || "";
+          if (medA && medB) {
+            pairsToCheck.push({
+              medicineA: medA,
+              medicineB: medB,
+              primarySeverity: "unknown",
+            });
+          }
+        }
+      }
+    }
+
+    if (pairsToCheck.length === 0) {
       return {
         status: "insufficient_data",
         statusLabel: "Insufficient Data",
         statusIcon: "⚪",
         details: [],
-        disclaimer: "No interactions to cross-check.",
+        disclaimer: "No medicine pairs to cross-check.",
       };
     }
 
     const results = [];
-    let overallStatus = "agree"; // optimistic start
+    let overallStatus = primarySuccess ? "agree" : "insufficient_data";
 
-    for (const ix of interactions.slice(0, 5)) { // limit to 5 pairs to avoid rate limits
-      const faersData = await getFAERSCoReports(ix.medicineA, ix.medicineB);
+    for (const pair of pairsToCheck.slice(0, 5)) { // limit to 5 pairs to avoid rate limits
+      const faersData = await getFAERSCoReports(pair.medicineA, pair.medicineB);
 
       let pairStatus = "insufficient_data";
       let pairNote = "";
@@ -90,27 +115,31 @@ const CrossCheckService = {
         pairStatus = "insufficient_data";
         pairNote = "Cross-check data is currently unavailable for this pair.";
       } else if (faersData.length === 0) {
-        pairStatus = "partial";
+        pairStatus = "insufficient_data";
         pairNote = "No co-reported adverse events found in FAERS. This does not confirm the combination is safe.";
-        if (overallStatus === "agree") overallStatus = "partial";
+        if (primarySuccess && overallStatus === "agree") overallStatus = "partial";
       } else {
-        // FAERS reports exist — this confirms there is known concern
-        pairStatus = "agree";
-        pairNote = `FAERS database contains adverse event reports involving this drug combination. Top reactions: ${faersData.map((r) => r.reaction).join(", ")}.`;
+        // FAERS reports exist — supporting evidence
+        pairStatus = primarySuccess ? "agree" : "insufficient_data";
+        pairNote = `FAERS database contains supporting adverse event reports involving this drug combination. Top reported reactions: ${faersData.map((r) => r.reaction).join(", ")}.`;
       }
 
       results.push({
-        medicineA: ix.medicineA,
-        medicineB: ix.medicineB,
-        primarySeverity: ix.severity,
+        medicineA: pair.medicineA,
+        medicineB: pair.medicineB,
+        primarySeverity: pair.primarySeverity,
         faersReactions: faersData || [],
         status: pairStatus,
         note: pairNote,
       });
 
-      if (pairStatus === "insufficient_data" && overallStatus === "agree") {
+      if (primarySuccess && pairStatus === "insufficient_data" && overallStatus === "agree") {
         overallStatus = "partial";
       }
+    }
+
+    if (!primarySuccess) {
+      overallStatus = "insufficient_data";
     }
 
     const statusConfig = {
@@ -127,9 +156,11 @@ const CrossCheckService = {
       statusLabel: cfg.label,
       statusIcon: cfg.icon,
       details: results,
-      disclaimer: overallStatus === "disagree"
+      disclaimer: !primarySuccess
+        ? "Primary interaction database (RxNorm) was unavailable. OpenFDA FAERS data is provided as supporting adverse-event evidence only and does not replace professional medical advice."
+        : overallStatus === "disagree"
         ? "Medical sources provide differing information. Please verify this combination with a pharmacist or doctor."
-        : "Cross-check is supplementary and does not replace professional medical advice.",
+        : "Cross-check is supplementary supporting evidence and does not replace professional medical advice.",
       checkedAt: new Date().toISOString(),
       source: "OpenFDA FAERS (FDA Adverse Event Reporting System)",
     };
